@@ -1,0 +1,66 @@
+name: JK_Windsurfing
+description: "Best Windsurfing forecasts for Switzerland"
+
+# Prevent accidental publishing to pub.dev.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  table_calendar: ^3.0.0
+  http: 1.1.2
+  syncfusion_flutter_charts: 23.2.7
+  intl: 0.18.1
+  geolocator: ^7.0.1
+  flutter_launcher_icons: ^0.13.1
+  shared_preferences: ^2.0.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.1
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/windsurfer.jpg" # Path to your icon image
+
+flutter:
+  uses-material-design: true
+
+  # Enable generation of localized Strings from arb files.
+  generate: true
+
+  assets:
+    # Add assets from the images directory to the application.
+    - assets/images/P1015742.jpg
+    - assets/images/swiss_flag.png
+    - assets/images/windsurfer_trans.png
+    - assets/images/urnersee.jpg
+    - assets/images/urnersee_forecast.jpg
+    - assets/images/walensee_forecast.jpg
+    - assets/images/untersee_forecast.jpg
+    - assets/images/silvaplana_forecast.jpg
+    - assets/images/murtensee_forecast.jpg
+    - assets/images/zürisee_forecast.jpg
+    - assets/images/lacleman_forecast.jpg
+    - assets/images/ägerisee_forecast.jpg
+    - assets/images/neuenburger_forecast.jpg
+    - assets/images/sihlsee_forecast.jpg
+    - assets/images/luganersee_forecast.jpg
+    - assets/images/como_forecast.jpg
+    - assets/images/maggiore_forecast.jpg
+    - assets/images/bielersee_forecast.jpg
+    - assets/images/greifensee_forecast.jpg
+    - assets/images/thalwil_forecast.jpg
+    - assets/images/zugersee_forecast.jpg
+    - assets/images/sempachersee_forecast.jpg
+    - assets/images/bodensee_forecast.jpg
+    - assets/images/current_loc_forecast.jpg
