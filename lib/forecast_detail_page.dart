@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+import 'unit_notifier.dart';
 
 class ForecastDetailPage extends StatefulWidget {
   final String lake;
@@ -23,10 +24,13 @@ class _ForecastDetailState extends State<ForecastDetailPage> {
 
   // Function to fetch content
   Future<Map<String, dynamic>> fetchContent() async {
-    var response = await http.get(Uri.parse(
-        "https://jkatkus.pythonanywhere.com/lake_cached/${widget.lake_img}"));
+    final unit = unitNotifier.value; // Get the current unit
+    final url =
+        "https://jkatkus.pythonanywhere.com/lake_cached/${widget.lake_img}/$unit";
+
+    var response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
-      return jsonDecode(response.body); // Return parsed JSON
+      return jsonDecode(response.body);
     } else {
       throw Exception('Failed to load content');
     }
@@ -144,6 +148,7 @@ class TransitionedContent extends StatelessWidget {
     double screenWidth = MediaQuery.of(context).size.width;
     double subtitleFontSize = screenWidth * 0.075;
     double contentFontSize = screenWidth * 0.06;
+    String unit = unitNotifier.value;
     var statusBarHeight = MediaQuery.of(context).padding.top;
     List<DataPoint> chartDataWindSpeed = [];
     List<DataPoint> chartDataWindGusts = [];
@@ -223,7 +228,7 @@ class TransitionedContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 40),
                 Text(
-                  "Wind forecast (kmh)",
+                  "Wind forecast ($unit)",
                   style: TextStyle(
                     fontSize: contentFontSize,
                     fontWeight: FontWeight.bold,
@@ -1005,7 +1010,7 @@ class TransitionedContent extends StatelessWidget {
                         const DataCell(Text(
                             'Today')), // Adjust the content based on your needs
                         DataCell(Text(
-                            '${forecast_json["summary"]["0"]["wind"]} / ${forecast_json["summary"]["0"]["gusts"]} kmh')),
+                            '${forecast_json["summary"]["0"]["wind"]} / ${forecast_json["summary"]["0"]["gusts"]} $unit')),
                         DataCell(
                           Transform.rotate(
                             angle: (forecast_json["summary"]["0"]["direction"] +
@@ -1024,7 +1029,7 @@ class TransitionedContent extends StatelessWidget {
                         const DataCell(Text(
                             'Tomorrow')), // Adjust the content based on your needs
                         DataCell(Text(
-                            '${forecast_json["summary"]["1"]["wind"]} / ${forecast_json["summary"]["1"]["gusts"]} kmh')),
+                            '${forecast_json["summary"]["1"]["wind"]} / ${forecast_json["summary"]["1"]["gusts"]} $unit')),
                         DataCell(
                           Transform.rotate(
                             angle: (forecast_json["summary"]["1"]["direction"] +
@@ -1043,7 +1048,7 @@ class TransitionedContent extends StatelessWidget {
                         DataCell(Text(
                             "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day + 2}, ${getWeekdayName(DateTime.now().weekday + 2)} ")), // Adjust the content based on your needs
                         DataCell(Text(
-                            '${forecast_json["summary"]["2"]["wind"]} / ${forecast_json["summary"]["2"]["gusts"]} kmh')),
+                            '${forecast_json["summary"]["2"]["wind"]} / ${forecast_json["summary"]["2"]["gusts"]} $unit')),
                         DataCell(
                           Transform.rotate(
                             angle: (forecast_json["summary"]["2"]["direction"] +
@@ -1062,7 +1067,7 @@ class TransitionedContent extends StatelessWidget {
                         DataCell(Text(
                             "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day + 3}, ${getWeekdayName(DateTime.now().weekday + 3)} ")), // Adjust the content based on your needs
                         DataCell(Text(
-                            '${forecast_json["summary"]["3"]["wind"]} / ${forecast_json["summary"]["3"]["gusts"]} kmh')),
+                            '${forecast_json["summary"]["3"]["wind"]} / ${forecast_json["summary"]["3"]["gusts"]} $unit')),
                         DataCell(
                           Transform.rotate(
                             angle: (forecast_json["summary"]["3"]["direction"] +

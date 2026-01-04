@@ -134,6 +134,7 @@ class _ForecastState extends State<ForecastPage> {
       {"name": "Bielersee", "img": "bielersee"},
       {"name": "Bodensee", "img": "bodensee"},
       {"name": "Greifensee", "img": "greifensee"},
+      {"name": "Hallwilersee", "img": "hallwilersee"},
       {"name": "Lac Leman", "img": "lacleman"},
       {"name": "Lago di Como", "img": "como"},
       {"name": "Lago di Lugano", "img": "luganersee"},

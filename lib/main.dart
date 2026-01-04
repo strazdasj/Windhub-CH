@@ -7,8 +7,15 @@ import 'sessions_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'forecast_detail_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'unit_notifier.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding
+      .ensureInitialized(); // Required before using SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+  final savedUnit = prefs.getString('unit') ?? 'kmh'; // Default to kmh
+  unitNotifier.value = savedUnit;
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Color.fromARGB(221, 17, 101, 112),
       systemNavigationBarColor: Color.fromARGB(221, 17, 101, 112)));
@@ -28,7 +35,6 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
-
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
@@ -40,43 +46,82 @@ class CustomAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double titleFontSize = screenWidth * 0.04;
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Color.fromARGB(221, 17, 101, 112),
-      systemNavigationBarColor: Color.fromARGB(221, 17, 101, 112),
-    ));
+
     return SafeArea(
       child: AppBar(
-        //backgroundColor: Colors.black87,
-        backgroundColor: Color.fromARGB(221, 17, 101, 112),
+        backgroundColor: const Color.fromARGB(221, 17, 101, 112),
         elevation: 0,
-        flexibleSpace: Container(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 20),
-                child: Opacity(
-                  opacity: 1,
-                  child: Image.asset(
-                    'assets/images/windsurfer_trans.png',
-                    width: 50,
-                    height: 50,
+        flexibleSpace: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const SizedBox(width: 10),
+            Row(
+              children: [
+                Image.asset('assets/images/windsurfer_trans.png',
+                    width: 50, height: 50),
+                Text(
+                  'Windhub CH',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Pacifico',
                   ),
                 ),
+              ],
+            ),
+            ValueListenableBuilder<String>(
+              valueListenable: unitNotifier,
+              builder: (context, currentUnit, _) => IconButton(
+                icon: const Icon(Icons.settings, color: Colors.black),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text('Select wind unit'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            RadioListTile<String>(
+                              title: const Text('km/h'),
+                              value: 'kmh',
+                              groupValue: currentUnit,
+                              onChanged: (value) async {
+                                Navigator.of(context).pop();
+                                if (value != null) {
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  await prefs.setString(
+                                      'unit', value); // ✅ Save the unit
+                                  unitNotifier.value = value;
+                                }
+                              },
+                            ),
+                            RadioListTile<String>(
+                              title: const Text('knots'),
+                              value: 'knots',
+                              groupValue: currentUnit,
+                              onChanged: (value) async {
+                                Navigator.of(context).pop();
+                                if (value != null) {
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  await prefs.setString(
+                                      'unit', value); // ✅ Save the unit
+                                  unitNotifier.value = value;
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
-              Text(
-                'Windhub CH',
-                style: TextStyle(
-                  //color: Colors.grey,
-                  color: Colors.black,
-                  fontSize: titleFontSize,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Pacifico',
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
         centerTitle: true,
       ),
@@ -92,20 +137,46 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Function to fetch content
   Future<Map<String, dynamic>> fetchContent() async {
-    var response = await http.get(
-        Uri.parse("https://jkatkus.pythonanywhere.com/SpotsOfTheDay_cached/0"));
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body); // Return parsed JSON
-    } else {
-      throw Exception('Failed to load content');
+    try {
+      final url =
+          "https://jkatkus.pythonanywhere.com/SpotsOfTheDay_cached/0/${unitNotifier.value}";
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          return data;
+        } else {
+          throw Exception('Unexpected JSON format');
+        }
+      } else {
+        throw Exception('Failed with status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('fetchContent error: $e');
+      rethrow;
     }
   }
 
   @override
   void initState() {
     super.initState();
-    fetchedContentFuture =
-        fetchContent(); // Assign the future when the widget is initialized
+    _loadUnitPreference().then((_) {
+      fetchedContentFuture = fetchContent(); // initial fetch after loading unit
+    });
+
+    // Listen for unit changes and refresh data when unitNotifier changes:
+    unitNotifier.addListener(() {
+      setState(() {
+        fetchedContentFuture = fetchContent();
+      });
+    });
+  }
+
+  Future<void> _loadUnitPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedUnit = prefs.getString('unit') ?? 'kmh';
+    unitNotifier.value = savedUnit;
   }
 
   @override
@@ -126,43 +197,47 @@ class _MyHomePageState extends State<MyHomePage> {
       extendBodyBehindAppBar: true,
       appBar: const PreferredSize(
         preferredSize: Size.fromHeight(50.0),
-        child: CustomAppBar(), // Reuse the CustomAppBar here
+        child: CustomAppBar(),
       ),
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        children: [
-          Stack(
-            fit: StackFit.expand,
+      body: ValueListenableBuilder<String>(
+        valueListenable: unitNotifier,
+        builder: (context, currentUnit, _) {
+          return PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
             children: [
-              FutureBuilder<Map<String, dynamic>>(
-                future:
-                    fetchedContentFuture, // Pass the future to the FutureBuilder
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    // While waiting for the future to complete, display a loading indicator
-                    return const LoadingContent();
-                  } else if (snapshot.hasError) {
-                    // If an error occurs during fetching data, display an error message
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  } else {
-                    // If the future completes successfully, display the content
-                    return TransitionedContent(
-                        forecast_json: snapshot.data!, context: context);
-                  }
-                },
+              Stack(
+                fit: StackFit.expand,
+                children: [
+                  FutureBuilder<Map<String, dynamic>>(
+                    future: fetchContent(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const LoadingContent();
+                      } else if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}'));
+                      } else if (snapshot.hasData) {
+                        return TransitionedContent(
+                          forecast_json: snapshot.data!,
+                          context: context,
+                          unit: unitNotifier.value,
+                        );
+                      } else {
+                        return const Center(child: Text('No data available.'));
+                      }
+                    },
+                  ),
+                ],
               ),
+              const NewsPage(),
+              const ForecastPage(),
             ],
-          ),
-          const NewsPage(), // Your NewsPage widget
-          const ForecastPage(),
-          const CalendarPage(),
-          const SessionsPage(),
-        ],
+          );
+        },
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color.fromARGB(221, 17, 101, 112),
@@ -233,8 +308,13 @@ class LoadingContent extends StatelessWidget {
 class TransitionedContent extends StatelessWidget {
   final BuildContext context;
   final Map<String, dynamic> forecast_json;
-  const TransitionedContent(
-      {super.key, required this.forecast_json, required this.context});
+  final String unit;
+  const TransitionedContent({
+    super.key,
+    required this.forecast_json,
+    required this.context,
+    required this.unit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -284,7 +364,7 @@ class TransitionedContent extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      BuildLakeButton(forecast_json, "1"),
+                      BuildLakeButton(forecast_json, "1", unit),
                       const SizedBox(height: 20),
                       Text(
                         '2. ${forecast_json["2"]["lake"]}',
@@ -294,7 +374,7 @@ class TransitionedContent extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      BuildLakeButton(forecast_json, "2"),
+                      BuildLakeButton(forecast_json, "2", unit),
                       const SizedBox(height: 20),
                       Text(
                         '3. ${forecast_json["3"]["lake"]}',
@@ -304,7 +384,7 @@ class TransitionedContent extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      BuildLakeButton(forecast_json, "3"),
+                      BuildLakeButton(forecast_json, "3", unit),
                       const SizedBox(height: 20),
                       Text(
                         '4. ${forecast_json["4"]["lake"]}',
@@ -314,7 +394,7 @@ class TransitionedContent extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      BuildLakeButton(forecast_json, "4")
+                      BuildLakeButton(forecast_json, "4", unit)
                     ])))
               ],
             ),
@@ -324,7 +404,8 @@ class TransitionedContent extends StatelessWidget {
     );
   }
 
-  Widget BuildLakeButton(Map<String, dynamic> forecastJson, String idx) {
+  Widget BuildLakeButton(
+      Map<String, dynamic> forecastJson, String idx, String unit) {
     double screenWidth = MediaQuery.of(context).size.width;
     double contentFontSize = screenWidth * 0.06;
     const double boxHeight = 80;
@@ -410,7 +491,7 @@ class TransitionedContent extends StatelessWidget {
             right: screenWidth / 2 - 120,
             width: 200,
             child: Text(
-              "${forecastJson[idx]["wind"]} - ${forecastJson[idx]["gusts"]} kmh",
+              "${forecastJson[idx]["wind"]} - ${forecastJson[idx]["gusts"]} $unit",
               style: const TextStyle(
                 fontSize: 20,
                 color: Colors.white,
